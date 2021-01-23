@@ -1,11 +1,38 @@
 const express = require('express')
-const {uuid} = require ('uuidv4')
+const {uuid, isUuid} = require ('uuidv4')
 
 const app = express()
 
 app.use(express.json())
 
 const projects = []
+
+function logRequest(request, response, next) {
+
+    const { method, url } = request
+
+    const logLabel = `[${method.toUpperCase()}] ${url}`
+
+    console.log(logLabel)
+
+    return next()
+
+}
+
+function validateProjectId(request, response, next) {
+
+    const { id } = request.params
+
+    if(!isUuid(id)){
+        return response.status(400).json({ error: 'Invalid project ID' }) //se entrar nesse comando nao sera executado mais nada, msm havendo um next
+    }
+
+    return next()
+}
+
+app.use(logRequest)
+
+//app.use('/projects/:id', validateProjectId, ) => outra forma de usar middlewares
 
 app.get('/projects', (request, response) => {
 
@@ -30,7 +57,7 @@ app.post('/projects', (request, response) => {
     return response.json(project)
 })
 
-app.put('/projects/:id', (request, response) => {
+app.put('/projects/:id', validateProjectId, (request, response) => {
 
     const { id } = request.params
     const { title , owner } = request.body
@@ -52,7 +79,7 @@ app.put('/projects/:id', (request, response) => {
     return response.json('Projeto atualizado com sucesso!')
 })
 
-app.delete('/projects/:id', (request, response) => {
+app.delete('/projects/:id', validateProjectId, (request, response) => {
 
     const { id } = request.params
     const projectIndex = projects.findIndex(project => project.id === id)
@@ -63,7 +90,7 @@ app.delete('/projects/:id', (request, response) => {
 
     projects.splice(projectIndex, 1)
 
-    return response.send('Projeto deletado com sucesso!')
+    return response.json('Projeto deletado com sucesso!')
 })
 
 app.listen(3333, () => {
